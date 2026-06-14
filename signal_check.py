@@ -29,8 +29,11 @@ HEADERS = {
 
 MA_PERIOD   = 1000
 INSTRUMENTS = [
-    {"symbol": "XAU_USD",    "name": "GOLD",   "unit": "pts"},
-    {"symbol": "NAS100_USD", "name": "NAS100", "unit": "pts"},
+    {"symbol": "XAU_USD",    "name": "GOLD"  },
+    {"symbol": "XAG_USD",    "name": "SILVER"},
+    {"symbol": "SPX500_USD", "name": "SP500" },
+    {"symbol": "US30_USD",   "name": "US30"  },
+    {"symbol": "NAS100_USD", "name": "NAS100"},
 ]
 
 
