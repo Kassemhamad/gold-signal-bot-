@@ -145,23 +145,12 @@ def check_instrument(instrument: str, name: str, open_trades: dict, now_utc: dat
             hit = "EOD"; exit_price = close
 
         if hit:
-            pnl_pts = (exit_price - entry) if direction == "LONG" else (entry - exit_price)
-            action  = "BUY" if direction == "LONG" else "SELL"
-            emoji   = "✅" if hit == "WIN" else ("❌" if hit == "LOSS" else "⏹")
-            label   = "TARGET HIT" if hit == "WIN" else ("STOP HIT" if hit == "LOSS" else "SESSION CLOSED")
-
-            msg = (
-                f"{emoji} *{name} TRADE CLOSED — {hit}*\n"
-                f"─────────────────────\n"
-                f"Direction : *{action}*\n"
-                f"Entry     : `{entry:.4f}`\n"
-                f"Exit      : `{exit_price:.4f}`  _{label}_\n"
-                f"Stop      : `{stop:.4f}`\n"
-                f"Target    : `{target:.4f}`\n"
-                f"PnL       : `{pnl_pts:+.4f} pts`\n"
-                f"Opened    : {trade['open_time']}\n"
-                f"Closed    : {time_str}"
-            )
+            if hit == "WIN":
+                msg = f"✅ *{name} — TP HIT*"
+            elif hit == "LOSS":
+                msg = f"❌ *{name} — SL HIT*"
+            else:
+                msg = f"⏹ *{name} — SESSION CLOSED*"
             print(f"  [{name}] CLOSED {hit}  entry={entry:.4f}  exit={exit_price:.4f}  pnl={pnl_pts:+.4f}")
             send_telegram(msg)
             del open_trades[name]
