@@ -66,6 +66,10 @@ def main() -> None:
     now_utc = datetime.now(timezone.utc)
     print(f"[{now_utc.strftime('%Y-%m-%d %H:%M')} UTC] Checking signal...")
 
+    # Send startup ping on manual runs
+    if os.getenv("GITHUB_EVENT_NAME") == "workflow_dispatch":
+        send_telegram(f"*XAUdar Bot online*\n{now_utc.strftime('%Y-%m-%d %H:%M UTC')}")
+
     # Weekend check
     if now_utc.weekday() >= 5:
         print("Weekend — market closed"); return
