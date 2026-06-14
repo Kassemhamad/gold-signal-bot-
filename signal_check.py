@@ -1,10 +1,10 @@
 """
 Single-shot signal checker — runs once and exits.
 GitHub Actions calls this every 5 minutes during NY session.
-Checks both XAU_USD (Gold) and NAS100_USD (Nasdaq).
+Tracks open trades in open_trades.json and sends result when TP/SL is hit.
 """
 import os
-import sys
+import json
 import requests
 import pandas as pd
 from datetime import datetime, timezone
@@ -27,7 +27,8 @@ HEADERS = {
     "Content-Type":  "application/json",
 }
 
-MA_PERIOD   = 1000
+MA_PERIOD      = 1000
+TRADES_FILE    = "open_trades.json"
 INSTRUMENTS = [
     {"symbol": "XAU_USD",    "name": "GOLD"  },
     {"symbol": "XAG_USD",    "name": "SILVER"},
@@ -45,6 +46,22 @@ INSTRUMENTS = [
     {"symbol": "EUR_GBP",    "name": "EURGBP"},
 ]
 
+
+# ── TRADE STATE ─────────────────────────────────────────────────────────────
+
+def load_trades() -> dict:
+    if os.path.exists(TRADES_FILE):
+        with open(TRADES_FILE) as f:
+            return json.load(f)
+    return {}
+
+
+def save_trades(trades: dict) -> None:
+    with open(TRADES_FILE, "w") as f:
+        json.dump(trades, f, indent=2)
+
+
+# ── OANDA ───────────────────────────────────────────────────────────────────
 
 def get_candles(instrument: str, granularity: str, count: int) -> pd.DataFrame:
     url    = f"{BASE_URL}/v3/instruments/{instrument}/candles"
@@ -65,6 +82,8 @@ def get_candles(instrument: str, granularity: str, count: int) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+# ── TELEGRAM ─────────────────────────────────────────────────────────────────
+
 def send_telegram(message: str) -> None:
     if not TELEGRAM_TOKEN:
         print(f"[NO TELEGRAM] {message}")
@@ -78,7 +97,9 @@ def send_telegram(message: str) -> None:
         print(f"Telegram error: {e}")
 
 
-def check_instrument(instrument: str, name: str) -> None:
+# ── CORE LOGIC ───────────────────────────────────────────────────────────────
+
+def check_instrument(instrument: str, name: str, open_trades: dict, now_utc: datetime) -> None:
     try:
         daily = get_candles(instrument, "D", 3)
         bars5 = get_candles(instrument, "M5", MA_PERIOD + 10)
@@ -89,18 +110,75 @@ def check_instrument(instrument: str, name: str) -> None:
         print(f"[{name}] No data"); return
 
     bars5["ma1000"] = bars5["close"].rolling(MA_PERIOD).mean()
+    bar = bars5.iloc[-1]
+    ma  = bar["ma1000"]
 
+    # ── CHECK IF OPEN TRADE HIT TP OR SL ────────────────────────────────────
+    if name in open_trades:
+        trade     = open_trades[name]
+        direction = trade["direction"]
+        entry     = trade["entry"]
+        stop      = trade["stop"]
+        target    = trade["target"]
+        high      = float(bar["high"])
+        low       = float(bar["low"])
+        close     = float(bar["close"])
+        time_str  = bar["time"].strftime("%H:%M UTC")
+
+        hit = None
+        exit_price = close
+
+        if direction == "LONG":
+            if high >= target:
+                hit = "WIN"; exit_price = target
+            elif low <= stop:
+                hit = "LOSS"; exit_price = stop
+        else:
+            if low <= target:
+                hit = "WIN"; exit_price = target
+            elif high >= stop:
+                hit = "LOSS"; exit_price = stop
+
+        # Session ended with no hit → close at EOD
+        session_end = now_utc.hour >= 20
+        if not hit and session_end:
+            hit = "EOD"; exit_price = close
+
+        if hit:
+            pnl_pts = (exit_price - entry) if direction == "LONG" else (entry - exit_price)
+            action  = "BUY" if direction == "LONG" else "SELL"
+            emoji   = "✅" if hit == "WIN" else ("❌" if hit == "LOSS" else "⏹")
+            label   = "TARGET HIT" if hit == "WIN" else ("STOP HIT" if hit == "LOSS" else "SESSION CLOSED")
+
+            msg = (
+                f"{emoji} *{name} TRADE CLOSED — {hit}*\n"
+                f"─────────────────────\n"
+                f"Direction : *{action}*\n"
+                f"Entry     : `{entry:.4f}`\n"
+                f"Exit      : `{exit_price:.4f}`  _{label}_\n"
+                f"Stop      : `{stop:.4f}`\n"
+                f"Target    : `{target:.4f}`\n"
+                f"PnL       : `{pnl_pts:+.4f} pts`\n"
+                f"Opened    : {trade['open_time']}\n"
+                f"Closed    : {time_str}"
+            )
+            print(f"  [{name}] CLOSED {hit}  entry={entry:.4f}  exit={exit_price:.4f}  pnl={pnl_pts:+.4f}")
+            send_telegram(msg)
+            del open_trades[name]
+            return
+
+        print(f"[{name}] Trade open  {direction}  entry={entry:.4f}  SL={stop:.4f}  TP={target:.4f}  now={close:.4f}")
+        return
+
+    # ── CHECK FOR NEW SIGNAL ─────────────────────────────────────────────────
     prev       = daily.iloc[-1]
     prev_green = prev["close"] > prev["open"]
     levels     = get_levels(prev["high"], prev["low"])
 
-    bar = bars5.iloc[-1]
-    ma  = bar["ma1000"]
-
     print(
         f"[{name}] {bar['time'].strftime('%H:%M')}  "
-        f"close={bar['close']:.2f}  MA={ma:.2f}  "
-        f"mid={levels['mid']:.2f}  prev={'GREEN' if prev_green else 'RED'}"
+        f"close={bar['close']:.4f}  MA={ma:.4f}  "
+        f"mid={levels['mid']:.4f}  prev={'GREEN' if prev_green else 'RED'}"
     )
 
     if pd.isna(ma):
@@ -117,20 +195,33 @@ def check_instrument(instrument: str, name: str) -> None:
 
     if signal:
         action = "BUY" if signal["direction"] == "LONG" else "SELL"
+        time_str = bar["time"].strftime("%H:%M UTC")
         msg = (
-            f"*{name} SIGNAL*\n"
-            f"Action : *{action}*\n"
-            f"Entry  : `{signal['entry']:.2f}`\n"
-            f"Stop   : `{signal['stop']:.2f}`\n"
-            f"Target : `{signal['target']:.2f}`\n"
-            f"Risk   : `{signal['risk']:.1f} pts`\n"
-            f"Time   : {bar['time'].strftime('%H:%M UTC')}"
+            f"🔔 *{name} — NEW SIGNAL*\n"
+            f"─────────────────────\n"
+            f"Direction : *{action}*\n"
+            f"Entry     : `{signal['entry']:.4f}`\n"
+            f"Stop Loss : `{signal['stop']:.4f}`\n"
+            f"Target    : `{signal['target']:.4f}`\n"
+            f"Risk      : `{signal['risk']:.4f} pts`\n"
+            f"Time      : {time_str}"
         )
-        print(f"  SIGNAL: {action}  entry={signal['entry']:.2f}  SL={signal['stop']:.2f}  TP={signal['target']:.2f}")
+        print(f"  SIGNAL: {action}  entry={signal['entry']:.4f}  SL={signal['stop']:.4f}  TP={signal['target']:.4f}")
         send_telegram(msg)
+
+        open_trades[name] = {
+            "symbol":    instrument,
+            "direction": signal["direction"],
+            "entry":     signal["entry"],
+            "stop":      signal["stop"],
+            "target":    signal["target"],
+            "open_time": time_str,
+        }
     else:
         print(f"[{name}] No signal this bar")
 
+
+# ── MAIN ─────────────────────────────────────────────────────────────────────
 
 def main() -> None:
     now_utc = datetime.now(timezone.utc)
@@ -155,8 +246,12 @@ def main() -> None:
     if session_end:
         print("Session closed — past 20:00 UTC"); return
 
+    open_trades = load_trades()
+
     for inst in INSTRUMENTS:
-        check_instrument(inst["symbol"], inst["name"])
+        check_instrument(inst["symbol"], inst["name"], open_trades, now_utc)
+
+    save_trades(open_trades)
 
 
 if __name__ == "__main__":
