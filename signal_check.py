@@ -35,6 +35,14 @@ INSTRUMENTS = [
     {"symbol": "US30_USD",   "name": "US30"  },
     {"symbol": "NAS100_USD", "name": "NAS100"},
     {"symbol": "EUR_USD",    "name": "EURUSD"},
+    {"symbol": "GBP_USD",    "name": "GBPUSD"},
+    {"symbol": "USD_JPY",    "name": "USDJPY"},
+    {"symbol": "USD_CAD",    "name": "USDCAD"},
+    {"symbol": "AUD_USD",    "name": "AUDUSD"},
+    {"symbol": "USD_CHF",    "name": "USDCHF"},
+    {"symbol": "GBP_JPY",    "name": "GBPJPY"},
+    {"symbol": "EUR_JPY",    "name": "EURJPY"},
+    {"symbol": "EUR_GBP",    "name": "EURGBP"},
 ]
 
 
