@@ -66,20 +66,6 @@ def main() -> None:
     now_utc = datetime.now(timezone.utc)
     print(f"[{now_utc.strftime('%Y-%m-%d %H:%M')} UTC] Checking signal...")
 
-    # On manual runs: send a fake signal to test Telegram end-to-end
-    if os.getenv("GITHUB_EVENT_NAME") == "workflow_dispatch":
-        send_telegram(
-            f"*XAUUSD SIGNAL* (TEST)\n"
-            f"Action : *BUY*\n"
-            f"Entry  : `3250.00`\n"
-            f"Stop   : `3200.00`\n"
-            f"Target : `3300.00`\n"
-            f"Risk   : `50.0 pts`\n"
-            f"Time   : {now_utc.strftime('%H:%M UTC')}"
-        )
-        print("Test signal sent to Telegram")
-        return
-
     # Weekend check
     if now_utc.weekday() >= 5:
         print("Weekend — market closed"); return
