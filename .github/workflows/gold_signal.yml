@@ -4,7 +4,12 @@ on:
   schedule:
     # Every 5 minutes, 13:00-20:00 UTC, Monday-Friday
     - cron: '*/5 13-20 * * 1-5'
-  workflow_dispatch:  # Allow manual run from GitHub UI
+  workflow_dispatch:
+    inputs:
+      test_mode:
+        description: 'Send test message (skip market hours check)'
+        required: false
+        default: 'false'
 
 jobs:
   check-signal:
@@ -30,4 +35,5 @@ jobs:
           OANDA_INSTRUMENT:  ${{ secrets.OANDA_INSTRUMENT }}
           TELEGRAM_TOKEN:    ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID:  ${{ secrets.TELEGRAM_CHAT_ID }}
+          TEST_MODE:         ${{ github.event.inputs.test_mode }}
         run: python signal_check.py

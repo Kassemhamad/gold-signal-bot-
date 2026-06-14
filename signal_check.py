@@ -136,6 +136,15 @@ def main() -> None:
     now_utc = datetime.now(timezone.utc)
     print(f"[{now_utc.strftime('%Y-%m-%d %H:%M')} UTC] Checking signals...")
 
+    if os.getenv("TEST_MODE", "false").lower() == "true":
+        send_telegram(
+            f"*Signal Bot — Test Ping*\n"
+            f"Bot is live and watching 14 markets.\n"
+            f"Time: {now_utc.strftime('%Y-%m-%d %H:%M')} UTC\n"
+            f"Next live signals: Mon–Fri 13:30–20:00 UTC"
+        )
+        print("Test message sent."); return
+
     if now_utc.weekday() >= 5:
         print("Weekend — market closed"); return
 
