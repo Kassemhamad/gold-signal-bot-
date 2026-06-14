@@ -34,6 +34,7 @@ INSTRUMENTS = [
     {"symbol": "SPX500_USD", "name": "SP500" },
     {"symbol": "US30_USD",   "name": "US30"  },
     {"symbol": "NAS100_USD", "name": "NAS100"},
+    {"symbol": "EUR_USD",    "name": "EURUSD"},
 ]
 
 
