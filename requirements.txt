@@ -1,0 +1,4 @@
+requests
+pandas
+aiohttp
+python-dotenv
