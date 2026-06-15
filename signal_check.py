@@ -95,15 +95,16 @@ def check_instrument(instrument: str, name: str, open_trades: dict, now_utc: dat
     try:
         daily = get_candles(instrument, "D", 3)
         bars5 = get_candles(instrument, "M5", MA_PERIOD + 10)
+        bars1 = get_candles(instrument, "M1", 6)
     except Exception as e:
         print(f"[{name}] Data error: {e}"); return
 
-    if daily.empty or bars5.empty:
+    if daily.empty or bars5.empty or bars1.empty:
         print(f"[{name}] No data"); return
 
     bars5["ma1000"] = bars5["close"].rolling(MA_PERIOD).mean()
-    bar = bars5.iloc[-1]
-    ma  = bar["ma1000"]
+    ma = float(bars5.iloc[-1]["ma1000"])  # MA from M5 (strategy basis)
+    bar = bars1.iloc[-1]                  # latest price from M1
 
     # ── CHECK IF OPEN TRADE HIT TP OR SL ─────────────────────────────────────
     if name in open_trades:
@@ -161,14 +162,20 @@ def check_instrument(instrument: str, name: str, open_trades: dict, now_utc: dat
     if pd.isna(ma):
         print(f"[{name}] MA not ready yet"); return
 
-    signal = check_entry(
-        bar_low   = float(bar["low"]),
-        bar_high  = float(bar["high"]),
-        bar_close = float(bar["close"]),
-        ma1000    = ma,
-        prev_green= prev_green,
-        levels    = levels,
-    )
+    # Check all M1 bars in the last 5 minutes for a level touch
+    signal = None
+    for _, m1_bar in bars1.iterrows():
+        signal = check_entry(
+            bar_low   = float(m1_bar["low"]),
+            bar_high  = float(m1_bar["high"]),
+            bar_close = float(m1_bar["close"]),
+            ma1000    = ma,
+            prev_green= prev_green,
+            levels    = levels,
+        )
+        if signal:
+            bar = m1_bar  # use the triggering bar for the alert time
+            break
 
     if signal:
         action   = "BUY" if signal["direction"] == "LONG" else "SELL"
