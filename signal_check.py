@@ -8,6 +8,9 @@ import json
 import requests
 import pandas as pd
 from datetime import datetime, timezone
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from strategy_50pct_reversal import get_levels, check_entry
 
@@ -95,7 +98,7 @@ def check_instrument(instrument: str, name: str, open_trades: dict, now_utc: dat
     try:
         daily = get_candles(instrument, "D", 3)
         bars5 = get_candles(instrument, "M5", MA_PERIOD + 10)
-        bars1 = get_candles(instrument, "M1", 6)
+        bars1 = get_candles(instrument, "M1", 2)
     except Exception as e:
         print(f"[{name}] Data error: {e}"); return
 

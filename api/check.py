@@ -121,7 +121,7 @@ async def fetch_all_data():
         for inst in INSTRUMENTS:
             tasks.append(fetch_candles(session, inst["symbol"], "D",  3))
             tasks.append(fetch_candles(session, inst["symbol"], "M5", MA_PERIOD + 10))
-            tasks.append(fetch_candles(session, inst["symbol"], "M1", 6))
+            tasks.append(fetch_candles(session, inst["symbol"], "M1", 2))
         return await asyncio.gather(*tasks)
 
 
