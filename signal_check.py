@@ -27,8 +27,9 @@ HEADERS = {
     "Content-Type":  "application/json",
 }
 
-MA_PERIOD   = 1000
-TRADES_FILE = "open_trades.json"
+MA_PERIOD    = 1000
+TRADES_FILE  = "open_trades.json"
+ALERTS_FILE  = "level_alerts.json"
 INSTRUMENTS = [
     {"symbol": "XAU_USD",    "name": "GOLD"  },
     {"symbol": "XAG_USD",    "name": "SILVER"},
@@ -59,6 +60,18 @@ def load_trades() -> dict:
 def save_trades(trades: dict) -> None:
     with open(TRADES_FILE, "w") as f:
         json.dump(trades, f, indent=2)
+
+
+def load_alerts() -> dict:
+    if os.path.exists(ALERTS_FILE):
+        with open(ALERTS_FILE) as f:
+            return json.load(f)
+    return {}
+
+
+def save_alerts(alerts: dict) -> None:
+    with open(ALERTS_FILE, "w") as f:
+        json.dump(alerts, f, indent=2)
 
 
 # ── OANDA ────────────────────────────────────────────────────────────────────
@@ -123,7 +136,7 @@ def send_daily_briefing(date_str: str) -> None:
 
 # ── CORE LOGIC ───────────────────────────────────────────────────────────────
 
-def check_instrument(instrument: str, name: str, open_trades: dict, now_utc: datetime) -> None:
+def check_instrument(instrument: str, name: str, open_trades: dict, level_alerts: dict, now_utc: datetime) -> None:
     try:
         daily = get_candles(instrument, "D", 3)
         bars5 = get_candles(instrument, "M5", MA_PERIOD + 10)
@@ -184,6 +197,7 @@ def check_instrument(instrument: str, name: str, open_trades: dict, now_utc: dat
     prev       = daily.iloc[-1]
     prev_green = prev["close"] > prev["open"]
     levels     = get_levels(prev["high"], prev["low"])
+    today      = now_utc.strftime("%Y-%m-%d")
 
     print(
         f"[{name}] {bar['time'].strftime('%H:%M')}  "
@@ -194,10 +208,23 @@ def check_instrument(instrument: str, name: str, open_trades: dict, now_utc: dat
     if pd.isna(ma):
         print(f"[{name}] MA not ready yet"); return
 
+    bar_low  = float(bar["low"])
+    bar_high = float(bar["high"])
+    mid      = levels["mid"]
+    touched  = bar_low <= mid or bar_high >= mid
+
+    # Send level alert once per market per day when price touches the 50%
+    alert_key = f"{name}_{today}"
+    if touched and alert_key not in level_alerts:
+        direction_label = "SHORT 🔻" if prev_green else "LONG 🔺"
+        send_telegram(f"⚡ *{name} — AT THE LEVEL*  {direction_label}\nWaiting for MA confirmation...")
+        level_alerts[alert_key] = True
+        print(f"  [{name}] Level touched — alert sent")
+
     signal = check_entry(
-        bar_low   = bar["low"],
-        bar_high  = bar["high"],
-        bar_close = bar["close"],
+        bar_low   = bar_low,
+        bar_high  = bar_high,
+        bar_close = float(bar["close"]),
         ma1000    = ma,
         prev_green= prev_green,
         levels    = levels,
@@ -207,7 +234,7 @@ def check_instrument(instrument: str, name: str, open_trades: dict, now_utc: dat
         action   = "BUY" if signal["direction"] == "LONG" else "SELL"
         time_str = bar["time"].strftime("%H:%M UTC")
         msg = (
-            f"🔔 *{name} — {action}*\n"
+            f"🔔 *{name} — {action} ACTIVE*\n"
             f"Entry : `{signal['entry']:.4f}`\n"
             f"SL    : `{signal['stop']:.4f}`\n"
             f"TP    : `{signal['target']:.4f}`\n"
@@ -259,12 +286,14 @@ def main() -> None:
         print("Sending daily briefing...")
         send_daily_briefing(date_str)
 
-    open_trades = load_trades()
+    open_trades  = load_trades()
+    level_alerts = load_alerts()
 
     for inst in INSTRUMENTS:
-        check_instrument(inst["symbol"], inst["name"], open_trades, now_utc)
+        check_instrument(inst["symbol"], inst["name"], open_trades, level_alerts, now_utc)
 
     save_trades(open_trades)
+    save_alerts(level_alerts)
 
 
 if __name__ == "__main__":
