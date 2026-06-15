@@ -1,2 +1,12 @@
+[project]
+name = "gold-signal-bot"
+version = "0.1.0"
+dependencies = [
+    "requests",
+    "pandas",
+    "aiohttp",
+    "python-dotenv",
+]
+
 [tool.vercel]
 entrypoint = "api/check:handler"
