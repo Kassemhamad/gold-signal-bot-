@@ -1,6 +1,7 @@
 {
   "functions": {
     "api/check.py": {
+      "runtime": "@vercel/python",
       "maxDuration": 30
     }
   }
