@@ -27,8 +27,8 @@ HEADERS = {
     "Content-Type":  "application/json",
 }
 
-MA_PERIOD      = 1000
-TRADES_FILE    = "open_trades.json"
+MA_PERIOD   = 1000
+TRADES_FILE = "open_trades.json"
 INSTRUMENTS = [
     {"symbol": "XAU_USD",    "name": "GOLD"  },
     {"symbol": "XAG_USD",    "name": "SILVER"},
@@ -47,7 +47,7 @@ INSTRUMENTS = [
 ]
 
 
-# ── TRADE STATE ─────────────────────────────────────────────────────────────
+# ── TRADE STATE ──────────────────────────────────────────────────────────────
 
 def load_trades() -> dict:
     if os.path.exists(TRADES_FILE):
@@ -61,7 +61,7 @@ def save_trades(trades: dict) -> None:
         json.dump(trades, f, indent=2)
 
 
-# ── OANDA ───────────────────────────────────────────────────────────────────
+# ── OANDA ────────────────────────────────────────────────────────────────────
 
 def get_candles(instrument: str, granularity: str, count: int) -> pd.DataFrame:
     url    = f"{BASE_URL}/v3/instruments/{instrument}/candles"
@@ -97,6 +97,30 @@ def send_telegram(message: str) -> None:
         print(f"Telegram error: {e}")
 
 
+# ── DAILY BRIEFING ───────────────────────────────────────────────────────────
+
+def send_daily_briefing(date_str: str) -> None:
+    lines = [f"📊 *Daily Levels — {date_str}*\n"]
+    for inst in INSTRUMENTS:
+        try:
+            daily = get_candles(inst["symbol"], "D", 3)
+            if daily.empty:
+                continue
+            prev   = daily.iloc[-1]
+            levels = get_levels(prev["high"], prev["low"])
+            direction = "SHORT 🔻" if prev["close"] > prev["open"] else "LONG 🔺"
+            lines.append(
+                f"*{inst['name']}*  {direction}\n"
+                f"  50%: `{levels['mid']:.4f}`  "
+                f"SL: `{levels['prev_high'] if prev['close'] > prev['open'] else levels['prev_low']:.4f}`  "
+                f"TP: `{levels['prev_low'] if prev['close'] > prev['open'] else levels['prev_high']:.4f}`"
+            )
+        except Exception as e:
+            print(f"[{inst['name']}] briefing error: {e}")
+
+    send_telegram("\n".join(lines))
+
+
 # ── CORE LOGIC ───────────────────────────────────────────────────────────────
 
 def check_instrument(instrument: str, name: str, open_trades: dict, now_utc: datetime) -> None:
@@ -113,7 +137,7 @@ def check_instrument(instrument: str, name: str, open_trades: dict, now_utc: dat
     bar = bars5.iloc[-1]
     ma  = bar["ma1000"]
 
-    # ── CHECK IF OPEN TRADE HIT TP OR SL ────────────────────────────────────
+    # ── CHECK IF OPEN TRADE HIT TP OR SL ─────────────────────────────────────
     if name in open_trades:
         trade     = open_trades[name]
         direction = trade["direction"]
@@ -123,25 +147,22 @@ def check_instrument(instrument: str, name: str, open_trades: dict, now_utc: dat
         high      = float(bar["high"])
         low       = float(bar["low"])
         close     = float(bar["close"])
-        time_str  = bar["time"].strftime("%H:%M UTC")
 
-        hit = None
+        hit        = None
         exit_price = close
 
         if direction == "LONG":
             if high >= target:
-                hit = "WIN"; exit_price = target
+                hit = "WIN";  exit_price = target
             elif low <= stop:
                 hit = "LOSS"; exit_price = stop
         else:
             if low <= target:
-                hit = "WIN"; exit_price = target
+                hit = "WIN";  exit_price = target
             elif high >= stop:
                 hit = "LOSS"; exit_price = stop
 
-        # Session ended with no hit → close at EOD
-        session_end = now_utc.hour >= 20
-        if not hit and session_end:
+        if not hit and now_utc.hour >= 20:
             hit = "EOD"; exit_price = close
 
         if hit:
@@ -151,7 +172,7 @@ def check_instrument(instrument: str, name: str, open_trades: dict, now_utc: dat
                 msg = f"❌ *{name} — SL HIT*"
             else:
                 msg = f"⏹ *{name} — SESSION CLOSED*"
-            print(f"  [{name}] CLOSED {hit}  entry={entry:.4f}  exit={exit_price:.4f}  pnl={pnl_pts:+.4f}")
+            print(f"  [{name}] CLOSED {hit}  entry={entry:.4f}  exit={exit_price:.4f}")
             send_telegram(msg)
             del open_trades[name]
             return
@@ -159,7 +180,7 @@ def check_instrument(instrument: str, name: str, open_trades: dict, now_utc: dat
         print(f"[{name}] Trade open  {direction}  entry={entry:.4f}  SL={stop:.4f}  TP={target:.4f}  now={close:.4f}")
         return
 
-    # ── CHECK FOR NEW SIGNAL ─────────────────────────────────────────────────
+    # ── CHECK FOR NEW SIGNAL ──────────────────────────────────────────────────
     prev       = daily.iloc[-1]
     prev_green = prev["close"] > prev["open"]
     levels     = get_levels(prev["high"], prev["low"])
@@ -183,17 +204,14 @@ def check_instrument(instrument: str, name: str, open_trades: dict, now_utc: dat
     )
 
     if signal:
-        action = "BUY" if signal["direction"] == "LONG" else "SELL"
+        action   = "BUY" if signal["direction"] == "LONG" else "SELL"
         time_str = bar["time"].strftime("%H:%M UTC")
         msg = (
-            f"🔔 *{name} — NEW SIGNAL*\n"
-            f"─────────────────────\n"
-            f"Direction : *{action}*\n"
-            f"Entry     : `{signal['entry']:.4f}`\n"
-            f"Stop Loss : `{signal['stop']:.4f}`\n"
-            f"Target    : `{signal['target']:.4f}`\n"
-            f"Risk      : `{signal['risk']:.4f} pts`\n"
-            f"Time      : {time_str}"
+            f"🔔 *{name} — {action}*\n"
+            f"Entry : `{signal['entry']:.4f}`\n"
+            f"SL    : `{signal['stop']:.4f}`\n"
+            f"TP    : `{signal['target']:.4f}`\n"
+            f"Time  : {time_str}"
         )
         print(f"  SIGNAL: {action}  entry={signal['entry']:.4f}  SL={signal['stop']:.4f}  TP={signal['target']:.4f}")
         send_telegram(msg)
@@ -234,6 +252,12 @@ def main() -> None:
         print("Pre-session — NY opens at 13:30 UTC"); return
     if session_end:
         print("Session closed — past 20:00 UTC"); return
+
+    # Send daily briefing on the first run of the session (13:30–13:35 UTC)
+    if now_utc.hour == 13 and now_utc.minute < 36:
+        date_str = now_utc.strftime("%a %d %b %Y")
+        print("Sending daily briefing...")
+        send_daily_briefing(date_str)
 
     open_trades = load_trades()
 
