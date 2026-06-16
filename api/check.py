@@ -185,8 +185,14 @@ def process_instrument(name: str, daily: pd.DataFrame, bars5: pd.DataFrame, bars
     if pd.isna(ma):
         return
 
+    # Only scan M1 bars that are within the session (>= 13:30 UTC)
+    session_bars1 = bars1[
+        (bars1["time"].dt.hour > 13) |
+        ((bars1["time"].dt.hour == 13) & (bars1["time"].dt.minute >= 30))
+    ]
+
     signal = None
-    for _, m1_bar in bars1.iterrows():
+    for _, m1_bar in session_bars1.iterrows():
         signal = check_entry(
             bar_low   = float(m1_bar["low"]),
             bar_high  = float(m1_bar["high"]),
@@ -282,12 +288,20 @@ async def run():
     all_data    = await fetch_all_data()
     open_trades = load_trades()
 
+    MAX_SIGNALS = 5  # max new signals per session to avoid Telegram spam
+    new_signals = len(open_trades)  # count already-open trades as used slots
+
     for i, inst in enumerate(INSTRUMENTS):
         daily = all_data[i * 3]
         bars5 = all_data[i * 3 + 1]
         bars1 = all_data[i * 3 + 2]
+        before = len(open_trades)
         process_instrument(inst["name"], daily, bars5, bars1, open_trades, now_utc,
                            session_end=inst.get("session_end", (20, 0)))
+        if len(open_trades) > before:
+            new_signals += 1
+        if new_signals >= MAX_SIGNALS:
+            break
 
     save_trades(open_trades)
     return "ok"
