@@ -5,6 +5,7 @@ Uses aiohttp for concurrent OANDA requests (fast, fits in 10s timeout).
 Uses Upstash Redis for open_trades state.
 """
 import os, json, asyncio
+from urllib.parse import quote, unquote
 import aiohttp
 import pandas as pd
 import requests as req_sync
@@ -62,7 +63,13 @@ def load_trades() -> dict:
             timeout=5
         )
         result = r.json().get("result")
-        return json.loads(result) if result else {}
+        if not result:
+            return {}
+        # Handle both URL-encoded and plain JSON stored values
+        try:
+            return json.loads(result)
+        except json.JSONDecodeError:
+            return json.loads(unquote(result))
     except:
         return {}
 
@@ -71,7 +78,7 @@ def save_trades(trades: dict) -> None:
     if not UPSTASH_URL:
         return
     try:
-        value = json.dumps(trades)
+        value = quote(json.dumps(trades), safe="")
         req_sync.post(
             f"{UPSTASH_URL}/set/open_trades/{value}",
             headers={"Authorization": f"Bearer {UPSTASH_TOKEN}"},
