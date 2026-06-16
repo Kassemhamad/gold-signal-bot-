@@ -189,13 +189,21 @@ def process_instrument(name: str, daily: pd.DataFrame, bars5: pd.DataFrame, bars
             break
 
     if signal:
-        action   = "BUY" if signal["direction"] == "LONG" else "SELL"
-        time_str = pd.to_datetime(bar["time"]).strftime("%H:%M UTC")
+        action    = "BUY" if signal["direction"] == "LONG" else "SELL"
+        time_str  = pd.to_datetime(bar["time"]).strftime("%H:%M UTC")
+        prev_color = "GREEN" if prev_green else "RED"
+        rule_line  = (
+            f"Prev {prev_color} → high≥mid, close>MA"
+            if signal["direction"] == "LONG"
+            else f"Prev {prev_color} → low≤mid, close<MA"
+        )
         msg = (
             f"🔔 *{name} — {action}*\n"
-            f"Entry : `{signal['entry']:.4f}`\n"
-            f"SL    : `{signal['stop']:.4f}`\n"
-            f"TP    : `{signal['target']:.4f}`\n"
+            f"Entry : `{signal['entry']:.5f}`\n"
+            f"SL    : `{signal['stop']:.5f}`\n"
+            f"TP    : `{signal['target']:.5f}`\n"
+            f"MA1000: `{ma:.5f}`\n"
+            f"Rule  : {rule_line}\n"
             f"Time  : {time_str}"
         )
         send_telegram(msg)
