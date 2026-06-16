@@ -9,6 +9,8 @@ import aiohttp
 import pandas as pd
 import requests as req_sync
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
+BEIRUT = ZoneInfo("Asia/Beirut")
 from http.server import BaseHTTPRequestHandler
 
 from strategy_50pct_reversal import get_levels, check_entry
@@ -190,7 +192,7 @@ def process_instrument(name: str, daily: pd.DataFrame, bars5: pd.DataFrame, bars
 
     if signal:
         action    = "BUY" if signal["direction"] == "LONG" else "SELL"
-        time_str  = pd.to_datetime(bar["time"]).strftime("%H:%M UTC")
+        time_str  = pd.to_datetime(bar["time"]).astimezone(BEIRUT).strftime("%H:%M Beirut")
         prev_color = "GREEN" if prev_green else "RED"
         rule_line  = (
             f"Prev {prev_color} → high≥mid, close>MA"

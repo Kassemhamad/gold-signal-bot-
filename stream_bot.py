@@ -7,6 +7,8 @@ Monitors open trades for TP/SL in real time.
 import os, json, time, threading, requests
 import pandas as pd
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
+BEIRUT = ZoneInfo("Asia/Beirut")
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -140,7 +142,7 @@ def ma_refresh_loop() -> None:
 # ── Session helpers ───────────────────────────────────────────────────────────
 
 def _now() -> str:
-    return datetime.now(timezone.utc).strftime("%H:%M:%S")
+    return datetime.now(BEIRUT).strftime("%H:%M:%S")
 
 
 def in_ny_session() -> bool:
@@ -246,7 +248,7 @@ def on_tick(sym: str, bid: float, ask: float) -> None:
             f"TP    : `{target:.5f}`\n"
             f"MA1000: `{ma:.5f}`\n"
             f"Rule  : {rule_line}\n"
-            f"Time  : {_now()} UTC"
+            f"Time  : {_now()} Beirut"
         )
         print(f"[{_now()}] SIGNAL {name} {action}  mid={mid:.5f}  MA={ma:.5f}")
 
