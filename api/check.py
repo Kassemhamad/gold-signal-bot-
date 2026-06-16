@@ -88,6 +88,50 @@ def save_trades(trades: dict) -> None:
         pass
 
 
+def load_signaled() -> set:
+    if not UPSTASH_URL:
+        return set()
+    try:
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        r = req_sync.get(
+            f"{UPSTASH_URL}/get/signaled_{today}",
+            headers={"Authorization": f"Bearer {UPSTASH_TOKEN}"},
+            timeout=5
+        )
+        result = r.json().get("result")
+        if not result:
+            return set()
+        try:
+            return set(json.loads(result))
+        except:
+            return set(json.loads(unquote(result)))
+    except:
+        return set()
+
+
+def add_signaled(name: str) -> None:
+    if not UPSTASH_URL:
+        return
+    try:
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        signaled = load_signaled()
+        signaled.add(name)
+        value = quote(json.dumps(list(signaled)), safe="")
+        req_sync.post(
+            f"{UPSTASH_URL}/set/signaled_{today}/{value}",
+            headers={"Authorization": f"Bearer {UPSTASH_TOKEN}"},
+            timeout=5
+        )
+        # Expire at midnight + 1h
+        req_sync.post(
+            f"{UPSTASH_URL}/expire/signaled_{today}/90000",
+            headers={"Authorization": f"Bearer {UPSTASH_TOKEN}"},
+            timeout=5
+        )
+    except:
+        pass
+
+
 # ── TELEGRAM ─────────────────────────────────────────────────────────────────
 
 def send_telegram(message: str) -> None:
@@ -139,7 +183,8 @@ async def fetch_all_data():
 # ── SIGNAL LOGIC ─────────────────────────────────────────────────────────────
 
 def process_instrument(name: str, daily: pd.DataFrame, bars5: pd.DataFrame, bars1: pd.DataFrame,
-                       open_trades: dict, now_utc: datetime, session_end: tuple = (20, 0)) -> None:
+                       open_trades: dict, now_utc: datetime, session_end: tuple = (20, 0),
+                       signaled: set = None) -> None:
     if daily.empty or bars5.empty or bars1.empty:
         return
 
@@ -183,6 +228,10 @@ def process_instrument(name: str, daily: pd.DataFrame, bars5: pd.DataFrame, bars
     end_h, end_m = session_end
     past_end = now_utc.hour > end_h or (now_utc.hour == end_h and now_utc.minute >= end_m)
     if past_end:
+        return
+
+    # Skip if already signaled today (guards against duplicate alerts)
+    if signaled and name in signaled:
         return
 
     prev       = daily.iloc[-1]
@@ -231,6 +280,7 @@ def process_instrument(name: str, daily: pd.DataFrame, bars5: pd.DataFrame, bars
             f"Time  : {time_str}"
         )
         send_telegram(msg)
+        add_signaled(name)
         open_trades[name] = {
             "symbol":    name,
             "direction": signal["direction"],
@@ -294,9 +344,10 @@ async def run():
 
     all_data    = await fetch_all_data()
     open_trades = load_trades()
+    signaled    = load_signaled()  # instruments that already fired today
 
-    MAX_SIGNALS = 5  # max new signals per session to avoid Telegram spam
-    new_signals = len(open_trades)  # count already-open trades as used slots
+    MAX_SIGNALS = 5
+    new_signals = len(signaled)
 
     for i, inst in enumerate(INSTRUMENTS):
         daily = all_data[i * 3]
@@ -304,7 +355,8 @@ async def run():
         bars1 = all_data[i * 3 + 2]
         before = len(open_trades)
         process_instrument(inst["name"], daily, bars5, bars1, open_trades, now_utc,
-                           session_end=inst.get("session_end", (20, 0)))
+                           session_end=inst.get("session_end", (20, 0)),
+                           signaled=signaled)
         if len(open_trades) > before:
             new_signals += 1
         if new_signals >= MAX_SIGNALS:
