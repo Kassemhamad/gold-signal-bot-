@@ -32,6 +32,7 @@ MA_PERIOD = 1000
 
 INSTRUMENTS = [
     {"symbol": "XAU_USD",    "name": "GOLD"  },
+    {"symbol": "WTICO_USD",  "name": "WTI"   },
     {"symbol": "XAG_USD",    "name": "SILVER"},
     {"symbol": "SPX500_USD", "name": "SP500" },
     {"symbol": "US30_USD",   "name": "US30"  },
