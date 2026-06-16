@@ -260,6 +260,25 @@ async def run():
             )
         return "session-closed"
 
+    # ── Session open notification (once per day at 13:30–13:35) ─────────────────
+    if now_utc.hour == 13 and 30 <= now_utc.minute <= 34:
+        today = now_utc.strftime("%Y-%m-%d")
+        open_key = f"session_opened_{today}"
+        already_sent = req_sync.get(
+            f"{UPSTASH_URL}/get/{open_key}?_token={UPSTASH_TOKEN}", timeout=5
+        ).json().get("result")
+        if not already_sent and UPSTASH_URL:
+            req_sync.post(
+                f"{UPSTASH_URL}/set/{open_key}/1?ex=86400&_token={UPSTASH_TOKEN}", timeout=5
+            )
+            beirut_time = now_utc.astimezone(BEIRUT).strftime("%H:%M Beirut")
+            send_telegram(
+                f"🟢 *NY Session Open*\n"
+                f"📅 {now_utc.strftime('%B %d, %Y')} — {beirut_time}\n"
+                f"⏰ Active until 20:00 UTC (23:00 Beirut)\n\n"
+                f"Watching {len(INSTRUMENTS)} instruments 👀"
+            )
+
     all_data    = await fetch_all_data()
     open_trades = load_trades()
 
