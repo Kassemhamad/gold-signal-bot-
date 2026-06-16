@@ -69,8 +69,8 @@ def check_entry(
     mid = levels["mid"]
 
     if prev_green:
-        # LONG setup: price HIGH reaches mid AND 5-min close is above MA1000
-        if bar_high >= mid and bar_close > ma1000:
+        # LONG: bar must cross through mid (low <= mid <= high) so entry at mid was accessible
+        if bar_low <= mid and bar_high >= mid and bar_close > ma1000:
             return {
                 "direction": "LONG",
                 "entry":     mid,
@@ -80,8 +80,8 @@ def check_entry(
                 "reward":    levels["prev_high"] - mid,
             }
     else:
-        # SHORT setup: price LOW reaches mid AND 5-min close is below MA1000
-        if bar_low <= mid and bar_close < ma1000:
+        # SHORT: bar must cross through mid (low <= mid <= high) so entry at mid was accessible
+        if bar_high >= mid and bar_low <= mid and bar_close < ma1000:
             return {
                 "direction": "SHORT",
                 "entry":     mid,

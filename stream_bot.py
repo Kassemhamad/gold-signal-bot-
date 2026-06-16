@@ -226,17 +226,17 @@ def on_tick(sym: str, bid: float, ask: float) -> None:
     if ma is None:
         return
 
-    # GREEN prev day -> LONG: price HIGH reaches mid AND close (ask) > MA
-    # RED   prev day -> SHORT: price LOW reaches mid AND close (bid) < MA
+    # GREEN prev day -> LONG: price crosses through mid (bid <= mid <= ask) AND ask > MA
+    # RED   prev day -> SHORT: price crosses through mid (bid <= mid <= ask) AND bid < MA
     if prev_green:
-        touched = ask >= mid
+        touched = bid <= mid and ask >= mid
         ok      = ask > ma
         direction = "LONG"
         target    = lv["prev_high"]
         stop      = lv["prev_low"]
         action    = "BUY"
     else:
-        touched = bid <= mid
+        touched = bid <= mid and ask >= mid
         ok      = bid < ma
         direction = "SHORT"
         target    = lv["prev_low"]
