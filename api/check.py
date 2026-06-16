@@ -67,10 +67,10 @@ def save_trades(trades: dict) -> None:
     if not UPSTASH_URL:
         return
     try:
+        value = json.dumps(trades)
         req_sync.post(
-            f"{UPSTASH_URL}/set/open_trades",
+            f"{UPSTASH_URL}/set/open_trades/{value}",
             headers={"Authorization": f"Bearer {UPSTASH_TOKEN}"},
-            json={"value": json.dumps(trades)},
             timeout=5
         )
     except:
