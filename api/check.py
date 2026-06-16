@@ -33,7 +33,7 @@ MA_PERIOD = 1000
 INSTRUMENTS = [
     {"symbol": "XAU_USD",    "name": "GOLD"  },
     {"symbol": "WTICO_USD",  "name": "WTI"   },
-    {"symbol": "DE30_EUR",   "name": "DE40"  },
+    {"symbol": "DE30_EUR",   "name": "DE40",  "session_end": (16, 30)},
     {"symbol": "XAG_USD",    "name": "SILVER"},
     {"symbol": "SPX500_USD", "name": "SP500" },
     {"symbol": "US30_USD",   "name": "US30"  },
@@ -132,7 +132,7 @@ async def fetch_all_data():
 # ── SIGNAL LOGIC ─────────────────────────────────────────────────────────────
 
 def process_instrument(name: str, daily: pd.DataFrame, bars5: pd.DataFrame, bars1: pd.DataFrame,
-                       open_trades: dict, now_utc: datetime) -> None:
+                       open_trades: dict, now_utc: datetime, session_end: tuple = (20, 0)) -> None:
     if daily.empty or bars5.empty or bars1.empty:
         return
 
@@ -160,7 +160,9 @@ def process_instrument(name: str, daily: pd.DataFrame, bars5: pd.DataFrame, bars
             if low <= target:  hit = "WIN";  exit_price = target
             elif high >= stop: hit = "LOSS"; exit_price = stop
 
-        if not hit and now_utc.hour >= 20:
+        end_h, end_m = session_end
+        past_end = now_utc.hour > end_h or (now_utc.hour == end_h and now_utc.minute >= end_m)
+        if not hit and past_end:
             hit = "EOD"; exit_price = close
 
         if hit:
@@ -169,6 +171,11 @@ def process_instrument(name: str, daily: pd.DataFrame, bars5: pd.DataFrame, bars
             else:               msg = f"⏹ *{name} — SESSION CLOSED*"
             send_telegram(msg)
             del open_trades[name]
+        return
+
+    end_h, end_m = session_end
+    past_end = now_utc.hour > end_h or (now_utc.hour == end_h and now_utc.minute >= end_m)
+    if past_end:
         return
 
     prev       = daily.iloc[-1]
@@ -260,7 +267,8 @@ async def run():
         daily = all_data[i * 3]
         bars5 = all_data[i * 3 + 1]
         bars1 = all_data[i * 3 + 2]
-        process_instrument(inst["name"], daily, bars5, bars1, open_trades, now_utc)
+        process_instrument(inst["name"], daily, bars5, bars1, open_trades, now_utc,
+                           session_end=inst.get("session_end", (20, 0)))
 
     save_trades(open_trades)
     return "ok"

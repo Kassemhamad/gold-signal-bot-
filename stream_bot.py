@@ -27,7 +27,7 @@ MA_PERIOD  = 1000
 INSTRUMENTS = [
     {"symbol": "XAU_USD",    "name": "GOLD"  },
     {"symbol": "WTICO_USD",  "name": "WTI"   },
-    {"symbol": "DE30_EUR",   "name": "DE40"  },
+    {"symbol": "DE30_EUR",   "name": "DE40",  "session_end": (16, 30)},
     {"symbol": "XAG_USD",    "name": "SILVER"},
     {"symbol": "SPX500_USD", "name": "SP500" },
     {"symbol": "US30_USD",   "name": "US30"  },
@@ -101,11 +101,12 @@ def fetch_levels_and_ma() -> None:
             ma = sum(m5[-MA_PERIOD:]) / MA_PERIOD if len(m5) >= MA_PERIOD else None
 
             levels[sym] = {
-                "mid":        mid,
-                "prev_high":  ph,
-                "prev_low":   pl,
-                "prev_green": prev_green,
-                "ma1000":     ma,
+                "mid":         mid,
+                "prev_high":   ph,
+                "prev_low":    pl,
+                "prev_green":  prev_green,
+                "ma1000":      ma,
+                "session_end": inst.get("session_end", (20, 0)),
             }
             color = "GREEN" if prev_green else "RED"
             print(f"  {name:8s}  mid={mid:.5f}  MA={ma:.5f if ma else 'N/A'}  prev={color}")
@@ -166,11 +167,14 @@ def on_tick(sym: str, bid: float, ask: float) -> None:
     if sym not in levels:
         return
 
-    price = (bid + ask) / 2
-    lv    = levels[sym]
-    name  = NAME_MAP.get(sym, sym)
+    lv   = levels[sym]
+    name = NAME_MAP.get(sym, sym)
 
-    # ── Check open trade for TP/SL ────────────────────────────────────────────
+    now_utc = datetime.now(timezone.utc)
+    end_h, end_m = lv.get("session_end", (20, 0))
+    past_end = now_utc.hour > end_h or (now_utc.hour == end_h and now_utc.minute >= end_m)
+
+    # ── Check open trade for TP/SL or instrument EOD ─────────────────────────
     if sym in open_trades:
         trade = open_trades[sym]
         hit   = None
@@ -181,6 +185,9 @@ def on_tick(sym: str, bid: float, ask: float) -> None:
         else:
             if bid <= trade["target"]:  hit = "WIN"
             elif ask >= trade["stop"]:  hit = "LOSS"
+
+        if not hit and past_end:
+            hit = "EOD"
 
         if hit == "WIN":
             send_telegram(
@@ -197,10 +204,17 @@ def on_tick(sym: str, bid: float, ask: float) -> None:
             )
             print(f"[{_now()}] {name} SL HIT")
             del open_trades[sym]
+
+        elif hit == "EOD":
+            send_telegram(f"⏹ *{name} — SESSION CLOSED*\nNo TP/SL hit by {end_h:02d}:{end_m:02d} UTC")
+            print(f"[{_now()}] {name} SESSION CLOSED (EOD)")
+            del open_trades[sym]
         return
 
     # ── Check for new entry signal ────────────────────────────────────────────
     if sym in signaled:
+        return
+    if past_end:
         return
     if not in_ny_session():
         return
