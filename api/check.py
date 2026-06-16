@@ -222,6 +222,23 @@ async def run():
     if not session_start:
         return "pre-session"
     if now_utc.hour >= 20:
+        today = now_utc.strftime("%Y-%m-%d")
+        close_key = f"session_closed_{today}"
+        already_sent = req_sync.get(
+            f"{UPSTASH_URL}/get/{close_key}?_token={UPSTASH_TOKEN}", timeout=5
+        ).json().get("result")
+        if not already_sent and UPSTASH_URL:
+            req_sync.post(
+                f"{UPSTASH_URL}/set/{close_key}/1?ex=86400&_token={UPSTASH_TOKEN}", timeout=5
+            )
+            send_telegram(
+                f"🌙 *Session closed — that's a wrap!*\n\n"
+                f"NY session is done for today.\n"
+                f"Time to relax 💤\n\n"
+                f"📅 {now_utc.strftime('%B %d, %Y')}\n"
+                f"⏰ Closed at 20:00 UTC\n\n"
+                f"See you tomorrow at 13:30 UTC 🚀"
+            )
         return "session-closed"
 
     all_data    = await fetch_all_data()
