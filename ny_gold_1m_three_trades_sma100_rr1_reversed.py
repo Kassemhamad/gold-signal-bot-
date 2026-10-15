@@ -88,7 +88,10 @@ def test_day(day, bars):
                                    (side == -1 and mid(previous[-1], 'c') < sma)):
             idx += 1
             continue
-        # Keep the original pattern and SMA100 qualification unchanged.\n        # Reverse ONLY the order side AFTER the original signal passes.\n        side = -side\n        # Assume trade enters next candle OPEN; signal uses only closed candles.
+        # Keep the original pattern and SMA100 qualification unchanged.
+        # Reverse ONLY the order side AFTER the original signal passes.
+        side = -side
+        # Assume trade enters next candle OPEN; signal uses only closed candles.
         entry = current["ao"] if side == 1 else current["bo"]
         stop = entry - STOP_DISTANCE * side
         target = entry + TARGET_DISTANCE * side
