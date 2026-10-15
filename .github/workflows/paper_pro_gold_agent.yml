@@ -1,0 +1,44 @@
+name: Paper Gold Decision Agent
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/15 * * * 1-5'
+concurrency:
+  group: paper-gold-decision-journal
+  cancel-in-progress: false
+permissions:
+  contents: write
+jobs:
+  paper:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - name: Analyze gold and update virtual trade journal
+        env:
+          OANDA_API_TOKEN: ${{ secrets.OANDA_API_TOKEN }}
+          OANDA_ENV: ${{ secrets.OANDA_ENV }}
+        run: python paper_pro_gold_agent.py
+      - name: Persist paper state only
+        run: |
+          git config user.name "Paper Gold Agent"
+          git config user.email "paper-gold@users.noreply.github.com"
+          git add paper_pro_gold_state.json paper_pro_gold_journal.jsonl
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: update paper gold decision journal"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gold-paper-decision-journal
+          path: |
+            paper_pro_gold_state.json
+            paper_pro_gold_journal.jsonl
