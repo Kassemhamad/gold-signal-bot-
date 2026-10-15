@@ -1,0 +1,42 @@
+name: NY Gold 1m Three Trades
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: 'Calendar days to backtest'
+        required: true
+        default: '90'
+      start:
+        description: 'New York session start (HH:MM)'
+        required: true
+        default: '09:30'
+      end:
+        description: 'New York session end (HH:MM)'
+        required: true
+        default: '16:00'
+permissions:
+  contents: read
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - name: Execute read-only OANDA backtest
+        env:
+          OANDA_API_TOKEN: ${{ secrets.OANDA_API_TOKEN }}
+          OANDA_ENV: ${{ secrets.OANDA_ENV }}
+          BACKTEST_DAYS: ${{ inputs.days }}
+          BACKTEST_START: ${{ inputs.start }}
+          BACKTEST_END: ${{ inputs.end }}
+        run: python ny_gold_1m_three_trades.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ny-gold-1m-three-trades-results
+          path: |
+            ny_gold_1m_three_trades.csv
+            ny_gold_1m_three_trades_summary.txt
