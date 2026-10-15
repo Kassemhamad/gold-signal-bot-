@@ -1,0 +1,9 @@
+{
+  "equity": 10000.0,
+  "position": null,
+  "last_checked_bar": null,
+  "last_trade_date": null,
+  "last_evaluated_bar": "2026-10-15T19:15:00+00:00",
+  "total_realized_r": 0.0,
+  "closed_trades": 0
+}
