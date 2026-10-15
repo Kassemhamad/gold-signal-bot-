@@ -93,11 +93,11 @@ def proposal(m5,ctx,m1):
     if not (2<=distance<=25):
         result["reason"]=f"Invalid stop distance {distance:.2f}"
         return result
-    target=entry+side*1.5*distance
+    target=entry+side*1.0*distance
     result.update(decision="BUY" if side==1 else "SELL",
         reason="Closed-M5 sweep and reclaim; H1 bias compatible; virtual entry at latest completed M1 quote",
         entry=round(entry,3),stop=round(stop,3),target=round(target,3),
-        risk_distance=round(distance,3),rr=1.5,signal_candle=latest["time"].isoformat())
+        risk_distance=round(distance,3),rr=1.0,signal_candle=latest["time"].isoformat())
     return result
 
 def mark_position(position,bars):
