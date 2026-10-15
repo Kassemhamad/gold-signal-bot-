@@ -1,0 +1,33 @@
+name: NY Gold Full Session M15 Breakout
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: Historical calendar days
+        default: '180'
+        required: true
+permissions:
+  contents: read
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - name: Test NY full session 15m breakout
+        env:
+          OANDA_API_TOKEN: ${{ secrets.OANDA_API_TOKEN }}
+          OANDA_ENV: ${{ secrets.OANDA_ENV }}
+          BACKTEST_DAYS: ${{ inputs.days }}
+        run: python ny_gold_full_session_breakout_m15.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ny-gold-full-session-m15-breakout-results
+          path: |
+            ny_gold_full_session_breakout_m15_trades.csv
+            ny_gold_full_session_breakout_m15_summary.txt
