@@ -58,7 +58,7 @@ def market_context(m5,m15,h1,now):
     return {"price":price,"bias":bias,"h1_change_4bars":round(slope,3),
             "reference_high":upper,"reference_low":lower}
 
-def proposal(m5,ctx):
+def proposal(m5,ctx,m1):
     # Sweep + reclaim of the recent 24h range with a 5m candle close.
     # Confirmation: wick swept level, close back inside, strong candle body.
     latest=m5[-1]
@@ -82,11 +82,11 @@ def proposal(m5,ctx):
     bearish=mid(latest,"h")>high and p<high and p<o and p<mid(previous,"c")
     if bullish and ctx["bias"]!="BEAR":
         side=1
-        entry=latest["ac"]
+        entry=m1[-1]["ac"]
         stop=min(latest["bl"],mid(previous,"l"))-0.15*atr
     elif bearish and ctx["bias"]!="BULL":
         side=-1
-        entry=latest["bc"]
+        entry=m1[-1]["bc"]
         stop=max(latest["ah"],mid(previous,"h"))+0.15*atr
     else:return result
     distance=side*(entry-stop)
@@ -95,7 +95,7 @@ def proposal(m5,ctx):
         return result
     target=entry+side*1.5*distance
     result.update(decision="BUY" if side==1 else "SELL",
-        reason="Sweep and reclaim confirmed by closed M5 candle; H1 bias not opposed",
+        reason="Closed-M5 sweep and reclaim; H1 bias compatible; virtual entry at latest completed M1 quote",
         entry=round(entry,3),stop=round(stop,3),target=round(target,3),
         risk_distance=round(distance,3),rr=1.5,signal_candle=latest["time"].isoformat())
     return result
@@ -161,7 +161,7 @@ def main():
         log(time=now.isoformat(),decision="HOLD",reason="Market data stale",context=ctx)
     elif state["last_evaluated_bar"]!=m5[-1]["time"].isoformat():
         state["last_evaluated_bar"]=m5[-1]["time"].isoformat()
-        idea=proposal(m5,ctx)
+        idea=proposal(m5,ctx,m1)
         log(time=now.isoformat(),context=ctx,**idea)
         if idea["decision"] in ("BUY","SELL"):
             risk_money=round(state["equity"]*RISK_FRACTION,2)
