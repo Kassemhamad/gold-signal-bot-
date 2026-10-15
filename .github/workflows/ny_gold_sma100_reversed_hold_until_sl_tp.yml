@@ -1,0 +1,34 @@
+name: NY Gold SMA100 Reverse Hold Overnight
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: Days of historical data
+        required: true
+        default: '90'
+permissions:
+  contents: read
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - name: Compare original and reversed trades without a session close
+        env:
+          OANDA_API_TOKEN: ${{ secrets.OANDA_API_TOKEN }}
+          OANDA_ENV: ${{ secrets.OANDA_ENV }}
+          BACKTEST_DAYS: ${{ inputs.days }}
+          BACKTEST_START: '09:30'
+          BACKTEST_END: '16:00'
+        run: python ny_gold_sma100_reversed_hold_until_sl_tp.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ny-gold-sma100-reversed-hold-overnight-results
+          path: |
+            ny_gold_sma100_reversed_hold_until_sl_tp.csv
+            ny_gold_sma100_reversed_hold_until_sl_tp_summary.txt
