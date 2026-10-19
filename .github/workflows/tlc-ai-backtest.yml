@@ -1,0 +1,24 @@
+name: TLC AI real gold historical backtest
+on:
+  push:
+    branches: [feature/tlc-ai-review]
+    paths: [ 'tlc_ai/**', '.github/workflows/tlc-ai-backtest.yml' ]
+  workflow_dispatch:
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download public XAUUSD history and run test
+        working-directory: tlc_ai
+        run: python run_public_data.py
+      - name: Upload research results
+        uses: actions/upload-artifact@v4
+        with:
+          name: tlc-ai-gold-backtest
+          path: tlc_ai/tlc_ai_results.json
