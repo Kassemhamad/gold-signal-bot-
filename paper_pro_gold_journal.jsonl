@@ -8,3 +8,4 @@
 {"time": "2026-10-16T21:11:39.262138+00:00", "decision": "HOLD", "reason": "Outside NY entry session", "context": {"price": 4165.42, "bias": "BULL", "h1_change_4bars": 3.68, "reference_high": 4199.08, "reference_low": 4147.115}}
 {"time": "2026-10-16T23:34:22.860755+00:00", "decision": "HOLD", "reason": "Outside NY entry session", "context": {"price": 4165.42, "bias": "BULL", "h1_change_4bars": 3.68, "reference_high": 4199.08, "reference_low": 4147.115}}
 {"time": "2026-10-17T01:32:27.049241+00:00", "decision": "HOLD", "reason": "Outside NY entry session", "context": {"price": 4165.42, "bias": "BULL", "h1_change_4bars": 3.68, "reference_high": 4199.08, "reference_low": 4147.115}}
+{"time": "2026-10-19T02:35:20.566432+00:00", "decision": "HOLD", "reason": "Outside NY entry session", "context": {"price": 4173.2, "bias": "BULL", "h1_change_4bars": 8.815, "reference_high": 4199.08, "reference_low": 4147.115}}
