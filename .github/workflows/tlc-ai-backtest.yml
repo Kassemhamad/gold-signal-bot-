@@ -20,6 +20,9 @@ jobs:
       - name: New York open 1R candle test
         working-directory: tlc_ai
         run: python ny_open_backtest.py
+      - name: New York open SMA trend-filter comparison
+        working-directory: tlc_ai
+        run: python ny_sma_backtest.py
       - name: Upload research results
         uses: actions/upload-artifact@v4
         with:
@@ -27,3 +30,4 @@ jobs:
           path: |
             tlc_ai/tlc_ai_results.json
             tlc_ai/ny_open_results.json
+            tlc_ai/ny_sma_results.json
