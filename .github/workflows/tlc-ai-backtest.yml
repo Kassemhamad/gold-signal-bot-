@@ -1,4 +1,4 @@
-name: TLC AI real gold historical backtest
+name: Gold historical strategy backtests
 on:
   push:
     branches: [feature/tlc-ai-review]
@@ -14,11 +14,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Download public XAUUSD history and run test
+      - name: Existing TLC trend liquidity test
         working-directory: tlc_ai
         run: python run_public_data.py
+      - name: New York open 1R candle test
+        working-directory: tlc_ai
+        run: python ny_open_backtest.py
       - name: Upload research results
         uses: actions/upload-artifact@v4
         with:
-          name: tlc-ai-gold-backtest
-          path: tlc_ai/tlc_ai_results.json
+          name: gold-strategy-backtests
+          path: |
+            tlc_ai/tlc_ai_results.json
+            tlc_ai/ny_open_results.json
