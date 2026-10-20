@@ -23,6 +23,9 @@ jobs:
       - name: New York open SMA trend-filter comparison
         working-directory: tlc_ai
         run: python ny_sma_backtest.py
+      - name: Reverse NY opening candle TP at wick
+        working-directory: tlc_ai
+        run: python ny_reverse_backtest.py
       - name: Upload research results
         uses: actions/upload-artifact@v4
         with:
@@ -31,3 +34,4 @@ jobs:
             tlc_ai/tlc_ai_results.json
             tlc_ai/ny_open_results.json
             tlc_ai/ny_sma_results.json
+            tlc_ai/ny_reverse_results.json
