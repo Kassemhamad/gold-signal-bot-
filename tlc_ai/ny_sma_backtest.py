@@ -44,7 +44,7 @@ def sma_bias(bars,length):
         if h in means:out[bar.ts]=(full[h],means[h])
     return out
 
-def backtest(bars,length=None,spread=.2,slippage=.1):
+def backtest(bars,length=None,spread=.2,slippage=.1,inverse=False):
     bydate=defaultdict(list)
     bias=sma_bias(bars,length) if length else {}
     for i,b in enumerate(bars):
@@ -61,7 +61,10 @@ def backtest(bars,length=None,spread=.2,slippage=.1):
         if length:
             if b.ts not in bias:continue
             hclose,mean=bias[b.ts]
-            if not ((direction==1 and hclose>mean) or (direction==-1 and hclose<mean)):continue
+            if inverse:
+                if not ((direction==1 and hclose<mean) or (direction==-1 and hclose>mean)):continue
+            else:
+                if not ((direction==1 and hclose>mean) or (direction==-1 and hclose<mean)):continue
         entry=nxt.o+direction*(spread+slippage)/2
         stop=b.l if direction==1 else b.h
         risk=direction*(entry-stop)
@@ -83,7 +86,7 @@ def backtest(bars,length=None,spread=.2,slippage=.1):
         maxdd=max(maxdd,(peak-balance)/peak)
         rows.append(dict(day=str(day),side="BUY" if direction==1 else "SELL",result=reason,R=round(r,4),equity=round(balance,2)))
     wins=sum(t["R"]>0 for t in rows)
-    return {"sma":length or "none","trades":len(rows),"wins":wins,"losses":len(rows)-wins,
+    return {"sma":length or "none","filter_mode":"inverse" if inverse else "trend","trades":len(rows),"wins":wins,"losses":len(rows)-wins,
       "win_rate_pct":round(100*wins/len(rows),2) if rows else None,
       "total_R":round(sum(x["R"] for x in rows),2),
       "ending_balance":round(balance,2),"max_drawdown_pct":round(100*maxdd,2),
@@ -93,9 +96,9 @@ if __name__=="__main__":
     bars=fetch()
     res={"source":URL,"period":[bars[0].ts.isoformat(),bars[-1].ts.isoformat()],
          "opening_candle":"09:30-09:35 NY 5-minute candle",
-         "filter":"last completed H1 close vs SMA of completed hourly closes",
+         "filter":"trend: buy above/sell below SMA; inverse: sell above/buy below SMA; last completed H1 close vs SMA",
          "scenarios":{}}
     for spread in (.2,.4,.8):
-        res["scenarios"][str(spread)]=[backtest(bars,n,spread) for n in [None,20,50,100,200]]
+        res["scenarios"][str(spread)]=[backtest(bars,n,spread,inverse=inv) for inv in [False,True] for n in [20,50,100,200]] + [backtest(bars,None,spread)]
         print(json.dumps([{k:v for k,v in t.items() if k!="trades_detail"} for t in res["scenarios"][str(spread)]],indent=2))
     Path("ny_sma_results.json").write_text(json.dumps(res,indent=2))
