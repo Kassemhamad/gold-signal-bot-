@@ -4,6 +4,7 @@ Compares SMA20, SMA50, SMA100, SMA200 versus unfiltered baseline.
 """
 import csv,io,json,urllib.request
 from collections import defaultdict
+from bisect import bisect_left
 from datetime import time
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -37,9 +38,9 @@ def sma_bias(bars,length):
     out={}
     for bar in bars:
         hour=bar.ts.replace(minute=0,second=0,microsecond=0)
-        prior=[h for h in completed_hours if h<hour]
-        if not prior:continue
-        h=prior[-1]
+        idx=bisect_left(completed_hours,hour)-1
+        if idx<0:continue
+        h=completed_hours[idx]
         if h in means:out[bar.ts]=(full[h],means[h])
     return out
 
