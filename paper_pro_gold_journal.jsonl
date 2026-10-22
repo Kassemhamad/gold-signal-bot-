@@ -24,3 +24,4 @@
 {"time": "2026-10-21T18:54:43.516286+00:00", "context": {"price": 4128.485, "bias": "BULL", "h1_change_4bars": 7.42, "reference_high": 4141.985000000001, "reference_low": 4106.34}, "decision": "HOLD", "reason": "No confirmed liquidity sweep", "spread": 0.41}
 {"time": "2026-10-21T22:02:52.112497+00:00", "decision": "HOLD", "reason": "Outside NY entry session", "context": {"price": 4141.014999999999, "bias": "BULL", "h1_change_4bars": 9.31, "reference_high": 4141.985000000001, "reference_low": 4105.01}}
 {"time": "2026-10-22T00:40:14.130251+00:00", "decision": "HOLD", "reason": "Outside NY entry session", "context": {"price": 4115.89, "bias": "BULL", "h1_change_4bars": 12.075, "reference_high": 4142.245, "reference_low": 4105.01}}
+{"time": "2026-10-22T05:21:43.381148+00:00", "decision": "HOLD", "reason": "Outside NY entry session", "context": {"price": 4087.41, "bias": "BEAR", "h1_change_4bars": -21.67, "reference_high": 4142.245, "reference_low": 4088.04}}
