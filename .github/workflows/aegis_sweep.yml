@@ -1,0 +1,30 @@
+name: AEGIS XAUUSD Liquidity Sweep Research
+on:
+  push:
+    branches: [aegis-liquidity-sweep-research]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install requests
+      - name: Run read-only four-variant AEGIS backtest
+        env:
+          OANDA_API_TOKEN: ${{ secrets.OANDA_API_TOKEN }}
+          OANDA_ENV: ${{ secrets.OANDA_ENV }}
+          BACKTEST_DAYS: '180'
+          ASSUMED_SPREAD: '0.30'
+          ASSUMED_SLIPPAGE: '0.05'
+        run: python aegis_liquidity_sweep.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: aegis-sweep-results
+          path: aegis_results/
