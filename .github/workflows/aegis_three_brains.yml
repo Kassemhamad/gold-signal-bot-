@@ -1,0 +1,33 @@
+name: AEGIS Three Brain Consensus Research
+on:
+  push:
+    branches: [aegis-liquidity-sweep-research]
+    paths:
+      - 'aegis_three_brains.py'
+      - '.github/workflows/aegis_three_brains.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - name: Three-brain simulation against 180 days of OANDA gold candles
+        env:
+          OANDA_API_TOKEN: ${{ secrets.OANDA_API_TOKEN }}
+          OANDA_ENV: ${{ secrets.OANDA_ENV }}
+          BACKTEST_DAYS: '180'
+          ASSUMED_SPREAD: '0.30'
+          ASSUMED_SLIPPAGE: '0.05'
+        run: python aegis_three_brains.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: aegis-three-brain-research-results
+          path: aegis_consensus_results/
