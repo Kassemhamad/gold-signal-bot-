@@ -95,6 +95,21 @@ def main():
             log(b,"ACCOUNT",s["level"],q,0,"BANKRUPT");paused=True;state=None
         else:
             state={"level":s["level"]+1,"qty":q*2,"entry":None}
+    cycle_map=collections.OrderedDict()
+    for e in events:
+        c=cycle_map.setdefault(e["cycle"],{"cycle":e["cycle"],"start_utc":"","end_utc":"","buy_attempts":0,"sell_trades":0,"sell_wins":0,"sell_pnl":0.0,"net_pnl":0.0,"buy_tp":False,"highest_level":0,"margin_stop":False})
+        if not c["start_utc"]:c["start_utc"]=e["timestamp_utc"]
+        c["end_utc"]=e["timestamp_utc"]
+        if e["side"]=="BUY":
+            c["buy_attempts"]+=1;c["highest_level"]=max(c["highest_level"],e["level"])
+            c["buy_tp"]|=e["outcome"]=="TP";c["net_pnl"]+=e["pnl_usd"]
+        if e["side"]=="SELL":
+            c["sell_trades"]+=1;c["sell_wins"]+=e["outcome"]=="TP"
+            c["sell_pnl"]+=e["pnl_usd"];c["net_pnl"]+=e["pnl_usd"]
+        if e["outcome"]=="INSUFFICIENT_MARGIN":c["margin_stop"]=True
+    with open("cent_rsi7_cycles.csv","w",newline="") as f:
+        w=csv.DictWriter(f,fieldnames=["cycle","start_utc","end_utc","buy_attempts","sell_trades","sell_wins","sell_pnl","net_pnl","buy_tp","highest_level","margin_stop"])
+        w.writeheader();w.writerows(cycle_map.values())
     months=collections.OrderedDict()
     for e in events:
         m=months.setdefault(e["month"],{"month":e["month"],"buy_profit":0,"sell_profit":0,"buy_loss":0,"sell_loss":0,"net":0,"trades":0,"wins":0,"ending_balance":0})
