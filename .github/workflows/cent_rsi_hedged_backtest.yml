@@ -32,3 +32,4 @@ jobs:
             cent_rsi_monthly.csv
             cent_rsi_trades.csv
             cent_rsi_summary.txt
+            cent_rsi_cycles.csv
