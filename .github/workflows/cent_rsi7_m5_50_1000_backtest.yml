@@ -32,3 +32,4 @@ jobs:
             cent_rsi7_m5_50_1000_monthly.csv
             cent_rsi7_m5_50_1000_trades.csv
             cent_rsi7_m5_50_1000_summary.txt
+            cent_rsi7_m5_50_1000_cycles.csv
