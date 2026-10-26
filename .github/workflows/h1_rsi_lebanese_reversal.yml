@@ -1,0 +1,36 @@
+name: H1 RSI Lebanese Reversal Research
+on:
+  push:
+    paths:
+      - '.github/workflows/h1_rsi_lebanese_reversal.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      matrix:
+        capital: [100, 1000]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - name: Run research only
+        env:
+          OANDA_API_TOKEN: ${{ secrets.OANDA_API_TOKEN }}
+          OANDA_ENV: ${{ secrets.OANDA_ENV }}
+          START_BALANCE: ${{ matrix.capital }}
+          TP_GOLD: '5'
+          REVERSE_GOLD: '10'
+        run: python h1_rsi_reversal_lebanese.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: h1-rsi-lebanese-${{ matrix.capital }}
+          path: |
+            h1_rsi_reversal_monthly.csv
+            h1_rsi_reversal_trades.csv
