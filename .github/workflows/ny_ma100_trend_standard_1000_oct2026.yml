@@ -1,0 +1,36 @@
+name: Gold MA100 NY Trend $1000 Standard Account
+on:
+  push:
+    paths:
+      - 'ny_ma100_trend_standard_1000_oct2026.py'
+      - '.github/workflows/ny_ma100_trend_standard_1000_oct2026.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download Dukascopy XAUUSD bid M1 October/November
+        run: npx -y dukascopy-node -i xauusd -from 2026-10-01 -to 2026-11-05 -t m1 -f csv -p bid -fn gold_bid -bs 15 -bp 1500
+      - name: Download Dukascopy XAUUSD ask M1 October/November
+        run: npx -y dukascopy-node -i xauusd -from 2026-10-01 -to 2026-11-05 -t m1 -f csv -p ask -fn gold_ask -bs 15 -bp 1500
+      - name: Simulate October 2026 NY opening trend strategy (no live orders)
+        run: python ny_ma100_trend_standard_1000_oct2026.py
+      - name: Upload detailed backtest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xauusd-ma100-1000-october-results
+          path: |
+            ma100_2026_october_summary.json
+            ma100_*_trades.csv
+            ma100_*_skips.csv
