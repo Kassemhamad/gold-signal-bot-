@@ -18,23 +18,22 @@ TOKEN=os.environ["OANDA_API_TOKEN"]
 HOST="https://api-fxtrade.oanda.com" if os.getenv("OANDA_ENV","practice")=="live" else "https://api-fxpractice.oanda.com"
 
 def fetch():
-    t=dt.datetime(2026,10,1,0,tzinfo=NY).astimezone(UTC)-dt.timedelta(hours=4)
-    end=min(dt.datetime.now(UTC).replace(second=0,microsecond=0),dt.datetime(2026,11,15,tzinfo=UTC))
-    bars={}
-    while t<end:
-        nxt=min(t+dt.timedelta(days=2),end)
-        r=requests.get(HOST+"/v3/instruments/XAU_USD/candles",
-            headers={"Authorization":"Bearer "+TOKEN},
-            params={"from":t.isoformat(),"to":nxt.isoformat(),"granularity":"M1","price":"BA"},
-            timeout=60)
-        r.raise_for_status()
-        for c in r.json()["candles"]:
-            if not c["complete"]:continue
-            ts=dt.datetime.fromisoformat(c["time"].replace("Z","+00:00")).replace(second=0,microsecond=0)
-            a=c["ask"];b=c["bid"]
-            bars[ts]=(ts,float(a["o"]),float(b["o"]),float(b["h"]),float(b["l"]),float(b["c"]))
-        t=nxt
-    return [bars[k] for k in sorted(bars)]
+    """Load separate Dukascopy XAUUSD bid and ask one-minute CSVs."""
+    sides={}
+    for side in ("bid","ask"):
+        data={}
+        with open("download/gold_"+side+".csv",newline="") as f:
+            for row in csv.DictReader(f):
+                ts=dt.datetime.fromtimestamp(int(row["timestamp"])/1000,UTC)
+                data[ts]=tuple(float(row[k]) for k in ("open","high","low","close"))
+        sides[side]=data
+    common=sorted(sides["ask"].keys() & sides["bid"].keys())
+    candles=[]
+    for ts in common:
+        ao=sides["ask"][ts][0]
+        bo,bh,bl,bc=sides["bid"][ts]
+        candles.append((ts,ao,bo,bh,bl,bc))
+    return candles
 
 def main():
     candles=fetch()
