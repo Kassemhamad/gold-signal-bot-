@@ -94,7 +94,7 @@ def main():
     fields=["id","date","entry_ny","lot","entry_ask","tp","sl","entry_spread",
             "exit_ny","exit_bid","outcome","pnl_usd","hold_hours","ambiguous_minute"]
     with open("ny_buy_cent_oct2026_trades.csv","w",newline="") as f:
-        w=csv.DictWriter(f,fieldnames=fields);w.writeheader();w.writerows(ledger)
+        w=csv.DictWriter(f,fieldnames=fields,extrasaction="ignore");w.writeheader();w.writerows(ledger)
     with open("ny_buy_cent_oct2026_summary.json","w") as f:json.dump(summary,f,indent=2)
     print(json.dumps(summary,indent=2))
     print("TRADE LEDGER")
