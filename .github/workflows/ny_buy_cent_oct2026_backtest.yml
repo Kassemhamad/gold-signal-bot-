@@ -10,18 +10,21 @@ permissions:
 jobs:
   backtest:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install HTTP client
-        run: pip install requests
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download XAUUSD bid one-minute historical candles (Dukascopy)
+        run: npx -y dukascopy-node -i xauusd -from 2026-10-01 -to 2026-11-05 -t m1 -f csv -p bid -fn gold_bid -bs 15 -bp 1500
+      - name: Download XAUUSD ask one-minute historical candles (Dukascopy)
+        run: npx -y dukascopy-node -i xauusd -from 2026-10-01 -to 2026-11-05 -t m1 -f csv -p ask -fn gold_ask -bs 15 -bp 1500
       - name: Backtest October 2026 (read-only, no orders)
         env:
-          OANDA_API_TOKEN: ${{ secrets.OANDA_API_TOKEN }}
-          OANDA_ENV: ${{ secrets.OANDA_ENV }}
           OZ_PER_CENT_LOT: '1'
         run: python ny_buy_cent_oct2026_backtest.py
       - name: Upload trade ledger and summary
