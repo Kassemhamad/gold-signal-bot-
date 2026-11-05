@@ -14,8 +14,6 @@ END=dt.date(2026,11,1)
 BASE=.02
 OZ=float(os.getenv("OZ_PER_CENT_LOT","1"))
 DIST=20.
-TOKEN=os.environ["OANDA_API_TOKEN"]
-HOST="https://api-fxtrade.oanda.com" if os.getenv("OANDA_ENV","practice")=="live" else "https://api-fxpractice.oanda.com"
 
 def fetch():
     """Load separate Dukascopy XAUUSD bid and ask one-minute CSVs."""
