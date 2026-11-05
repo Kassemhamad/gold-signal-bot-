@@ -5,7 +5,7 @@ Start 0.02 cent lots, double after each SL, reset after each TP.
 Multiple positions can overlap; each still closes only on TP/SL.
 OZ_PER_CENT_LOT default 1; no capital/margin limit modeled.
 """
-import csv,datetime as dt,json,os,requests
+import csv,datetime as dt,json,os
 from zoneinfo import ZoneInfo
 NY=ZoneInfo("America/New_York")
 UTC=dt.timezone.utc
